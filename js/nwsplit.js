@@ -908,25 +908,21 @@ if(typeof process !== 'undefined') {
       menu.popup(e.clientX, e.clientY)
     }
   }
-  var sock = false
-  if(process.platform.match(/linux|darwin/ig)) {
-    var os = require('os')
-    sock = os.tmpDir()+'/nwsplit.sock'
-    if(fs.existsSync(sock)) {
-      fs.unlinkSync(sock)
-    }
-  } else if(process.platform.match(/win32/ig)) {
-    sock = '\\\\.\\pipe\\nwsplit'
+  var sock_path = false
+  
+	import {invoke} from '@tauri-apps/api';
+	import { type, tempdir } from '@tauri-apps/api/os';
+const osType = await type();
+
+  if(osType.match(/Linux|Darwin/ig)) {
+    sock_path = tempdir()+'/nwsplit.sock'
+  } else if(osType.match(/Windows_NT/ig)) {
+    sock_path = '\\\\.\\pipe\\nwsplit'
   }
-  if(sock) {
-    var net = require('net')
-    var server = net.createServer(function(stream) {
-      stream.on('data', function(c) {
-        console.log('Socket says '+c.toString())
-        eval(c.toString())
-      })
-    })
-    server.listen(sock)
+  if(sock_path) {
+    invoke("mkpipe", {location: sock_path})
+	listen("pipe_event", (event) => {eval(event.payload)})
+
   }
   win.on('close', function() {
     this.hide()
