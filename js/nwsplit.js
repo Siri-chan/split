@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api";
 import { type, tempdir } from "@tauri-apps/api/os";
 import { listen } from "@tauri-apps/api/event";
+import { writeTextFile } from "@tauri-apps/api/fs";
+import { save } from "@tauri-apps/api/dialog";
 
-var defaults = {
+let defaults = {
   ontop: true,
   precision: 1,
   trim: true,
@@ -36,10 +38,9 @@ var defaults = {
   zoom: 1,
   css: "",
 };
-var RESET = 0,
-  RUNNING = 1,
-  PAUSED = 2,
-  STOPPED = 3;
+
+let RESET = 0, RUNNING = 1, PAUSED = 2, STOPPED = 3;
+
 var v = {
   inter: 0,
   drawinter: 0,
@@ -633,7 +634,7 @@ var editOptions = function () {
     }
   }
 };
-var save = function () {
+var _save = function () {
   localStorage.splits = JSON.stringify(splits);
   options.css = $("style").html();
   if (typeof win !== "undefined") {
@@ -700,7 +701,7 @@ var split = function () {
   }
   updateStaticSegments();
   centerSplit();
-  save();
+  _save();
 };
 var splitHandler = function (c) {
   for (var i in c) {
@@ -831,7 +832,7 @@ var stop = function () {
   if (v.state != RESET) {
     v.state = STOPPED;
   }
-  save();
+  _save();
   centerSplit();
 };
 var trash = function () {
@@ -849,7 +850,7 @@ var reset = function () {
     }
     $("#title").html(options.title);
     $("#attempts").html(options.attempts);
-    save();
+    _save();
   }
   if (splits.length == 0) {
     $("#buttonsave").hide();
@@ -877,7 +878,7 @@ var reset = function () {
   centerSplit();
   updateStaticSegments();
   draw();
-  save();
+  _save();
 };
 var pause = function () {
   if (v.state == PAUSED) {
@@ -897,7 +898,7 @@ var pause = function () {
     editOptions();
   }
   updateTime();
-  save();
+  _save();
 };
 var ttime = function (time) {
   time = Math.abs(time);
@@ -1043,14 +1044,13 @@ var exportWsplit = function () {
     icons.push('"' + splits[i].icon + '"');
   }
   data += "Icons=" + icons.join(",");
-  if (typeof fs !== "undefined") {
-    var file = $(
-      '<input type="file" accept=".wsplit" nwsaveas="' + options.title + '">',
-    );
-    file.change(function () {
-      var path = this.files[0].path;
-      fs.writeFile(path, data);
-    });
+  if (window.__TAURI__) {
+    save({
+		filters: [{
+			name: "Split Files",
+			extensions: ['wsplit']
+		}]
+	}).then(async (path) => { await writeTextFile({path: path, contents: data}) })
     file.click();
   } else {
     var ex = document.createElement("a");
@@ -1099,7 +1099,7 @@ var importWsplit = function () {
         Object.observe(splits[splits.length - 1], splitHandler);
         appendSplit(newname, newtime, newseg);
       }
-      save();
+      _save();
     };
     reader.readAsText(this.files[0]);
   });
@@ -1451,7 +1451,7 @@ $(function () {
     splits[id].best = val;
     splits[id].current = val;
     $(this).html(ttime(val));
-    save();
+    _save();
     $("#splits").click();
   });
   $("#container").on("blur", ".seg", function (e) {
@@ -1466,7 +1466,7 @@ $(function () {
     splits[id].bestseg = val;
     splits[id].seg = val;
     $(this).html(ttime(val));
-    save();
+    _save();
     $("#splits").click();
   });
   $("#container").on("blur", ".name", function (e) {
@@ -1489,7 +1489,7 @@ $(function () {
     } else {
       splits[id].name = val;
     }
-    save();
+    _save();
     $("#timer").click();
   });
   if (typeof win !== "undefined") {
@@ -1512,11 +1512,11 @@ $(function () {
   });
   $("#title").blur(function () {
     options.title = $("#title").html();
-    save();
+    _save();
   });
   $("#attempts").blur(function () {
     options.attempts = parseInt($("#attempts").html()) || 0;
-    save();
+    _save();
   });
   $("#bar").on("click", ".button", function (e) {
     if (buttonHandler[this.id]) {
@@ -1547,7 +1547,7 @@ $(function () {
         optionHandler[c[i].name](options[c[i].name]);
       }
     }
-    save();
+    _save();
   });
   if (typeof win !== "undefined") {
     setTimeout(function () {
