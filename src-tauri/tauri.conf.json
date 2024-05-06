@@ -55,10 +55,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
-        "resizable": true,
-        "title": "nwsplit",
-        "width": 800
+        "height": 1080,
+        "resizable": false,
+        "title": "sp/it",
+        "width": 350
       }
     ]
   }
