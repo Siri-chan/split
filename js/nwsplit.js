@@ -4,6 +4,8 @@ import { listen } from "@tauri-apps/api/event";
 import { writeTextFile } from "@tauri-apps/api/fs";
 import { save } from "@tauri-apps/api/dialog";
 
+import { clone, getMs, key, keymap, parseBool, rnd } from "./util.js";
+
 let defaults = {
   ontop: true,
   precision: 1,
@@ -39,9 +41,9 @@ let defaults = {
   css: "",
 };
 
-let RESET = 0, RUNNING = 1, PAUSED = 2, STOPPED = 3;
+const RESET = 0, RUNNING = 1, PAUSED = 2, STOPPED = 3;
 
-var v = {
+let v = {
   inter: 0,
   drawinter: 0,
   n: 0,
@@ -55,43 +57,19 @@ var v = {
   plot: false,
   history: [],
 };
-var custom = null;
-function clone(obj) {
-  if (null == obj || "object" != typeof obj) return obj;
-  if (obj instanceof Date) {
-    var copy = new Date();
-    copy.setTime(obj.getTime());
-    return copy;
-  }
-  if (obj instanceof Array) {
-    var copy = [];
-    for (var i = 0, len = obj.length; i < len; i++) {
-      copy[i] = clone(obj[i]);
-    }
-    return copy;
-  }
-  if (obj instanceof Object) {
-    var copy = {};
-    for (var attr in obj) {
-      if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
-    }
-    return copy;
-  }
-}
-var parseBool = function (bool) {
-  if (bool == "false" || bool == 0 || bool == "0") {
-    return false;
-  }
-  return true;
-};
+
+let custom = null;
+
 var options = clone(defaults);
 var optionHandler = {
-  ontop: function (o) {
+  /* TODO: Port always-on-top
+	ontop: function (o) {
     options.ontop = parseBool(o);
     if (typeof win !== "undefined") {
       win.setAlwaysOnTop(options.ontop);
     }
   },
+	*/
   precision: function (o) {
     options.precision = parseInt(options.precision) || 1;
     if (options.precision < 0 || options.precision > 3) {
@@ -154,7 +132,7 @@ var optionHandler = {
   },
   toolbar: function (o) {
     options.toolbar = parseBool(o);
-    if (typeof win === "undefined") return;
+    if (!window.__TAURI__) return;
     if (options.toolbar) {
       $("#bar").slideDown();
     } else {
@@ -171,6 +149,7 @@ var optionHandler = {
       $(".name,.seg,.time").css("line-height", "16px").css("height", "auto");
     }
   },
+/* TODO: Port the global hotkeys ???
   global_split: function (o) {
     if (typeof gui !== "undefined") {
       gui.App.unregisterGlobalHotKey(v.shortcut_split);
@@ -246,13 +225,16 @@ var optionHandler = {
       gui.App.registerGlobalHotKey(v.shortcut_undo);
     }
   },
+	*/
   local_split: function (o) {},
   local_stop: function (o) {},
   local_pause: function (o) {},
   local_reset: function (o) {},
   local_undo: function (i) {},
+	/* TODO: Do we need these? Window is movable and resizable, and preserves size alr.
+	* Don"t know if Tauri exposes window stuff either...
   width: function (o) {
-    if (typeof win !== "undefined") {
+    if (typeof in !== "undefined") {
       win.width = o;
     }
   },
@@ -271,6 +253,7 @@ var optionHandler = {
       win.y = o;
     }
   },
+	*/
   zoom: function (o) {
     options.zoom = parseFloat(o) || 1;
     if (typeof win !== "undefined") {
@@ -283,62 +266,9 @@ var optionHandler = {
     $("style").html(o);
   },
 };
-var keymap = {
-  backspace: 8,
-  command: 91,
-  tab: 9,
-  clear: 12,
-  enter: 13,
-  shift: 16,
-  ctrl: 17,
-  alt: 18,
-  capslock: 20,
-  escape: 27,
-  esc: 27,
-  space: 32,
-  pageup: 33,
-  pgup: 33,
-  pagedown: 34,
-  pgdn: 34,
-  end: 35,
-  home: 36,
-  left: 37,
-  up: 38,
-  right: 39,
-  down: 40,
-  del: 46,
-  comma: 188,
-  f1: 112,
-  f2: 113,
-  f3: 114,
-  f4: 115,
-  f5: 116,
-  f6: 117,
-  f7: 118,
-  f8: 119,
-  f9: 120,
-  f10: 121,
-  f11: 122,
-  f12: 123,
-  ",": 188,
-  ".": 190,
-  "/": 191,
-  "`": 192,
-  "-": 189,
-  "=": 187,
-  ";": 186,
-  "[": 219,
-  "\\": 220,
-  "]": 221,
-  "'": 222,
-};
-var key = function (name) {
-  return (
-    keymap[String(name).toLowerCase()] ||
-    String(name).toUpperCase().charCodeAt(0)
-  );
-};
-var getCss = function () {
+
+
+const getCss = () => {
   var file = $('<input type="file" accept=".css">');
   file.change(function () {
     var reader = new FileReader();
@@ -350,7 +280,8 @@ var getCss = function () {
   });
   file.click();
 };
-var getIcon = function (n) {
+
+const getIcon = (n) => {
   var file = $('<input type="file" accept="image/*">');
   file.change(function () {
     var reader = new FileReader();
@@ -362,13 +293,14 @@ var getIcon = function (n) {
         data = reader.result;
         splits[n].icon = data;
         $(".icon")[n].src = data;
-        save();
+        _save();
       };
       reader.readAsDataURL(file[0].files[0]);
     }
   });
   file.click();
 };
+
 var plotopt = {
   colors: ["#eee"],
   series: {
@@ -396,6 +328,7 @@ var plotopt = {
     redrawOverlayInterval: 10000000,
   },
 };
+
 var updateStaticSegments = function () {
   if (!options.graph) {
     return;
@@ -461,6 +394,7 @@ var updateStaticSegments = function () {
     v.lastpoint = v.data[i];
   }
 };
+
 var draw = function () {
   if (!options.graph) {
     clearInterval(v.drawinter);
@@ -536,6 +470,7 @@ var draw = function () {
   v.plot.setupGrid();
   v.plot.draw();
 };
+
 var editOptions = function () {
   if ($("#options").is(":visible")) {
     $("#options .value").each(function () {
@@ -634,15 +569,18 @@ var editOptions = function () {
     }
   }
 };
+
 var _save = function () {
   localStorage.splits = JSON.stringify(splits);
   options.css = $("style").html();
-  if (typeof win !== "undefined") {
+  /* TODO: Do I need to port these settings?
+	if (typeof win !== "undefined") {
     options.width = win.width;
     options.height = win.height;
     options.x = win.x;
     options.y = win.y;
   }
+	*/
   localStorage.options = JSON.stringify(options);
   var savev = {};
   var savedvars = [
@@ -659,6 +597,7 @@ var _save = function () {
   }
   localStorage.v = JSON.stringify(savev);
 };
+
 var undo = function () {
   if (v.state == STOPPED) {
     v.inter = setInterval(updateTime, options.interval);
@@ -677,6 +616,7 @@ var undo = function () {
     }
   }
 };
+
 var split = function () {
   if (v.state == PAUSED) {
     pause();
@@ -703,6 +643,7 @@ var split = function () {
   centerSplit();
   _save();
 };
+
 var splitHandler = function (c) {
   for (var i in c) {
     for (var s in splits) {
@@ -714,6 +655,7 @@ var splitHandler = function (c) {
     }
   }
 };
+
 var addSplit = function (add) {
   if (add) {
     var name = "Split " + (splits.length + 1);
@@ -765,6 +707,7 @@ var addSplit = function (add) {
   }
   updateStaticSegments();
 };
+
 var saveSplits = function (all) {
   var old = clone(splits);
   var changes = false;
@@ -801,6 +744,7 @@ var saveSplits = function (all) {
   }
   updateStaticSegments();
 };
+
 var stop = function () {
   if (v.state == RESET) {
     addSplit(splits.length);
@@ -835,12 +779,14 @@ var stop = function () {
   _save();
   centerSplit();
 };
+
 var trash = function () {
   reset();
   v.resets = 10;
   reset();
   updateStaticSegments();
 };
+
 var reset = function () {
   if (v.time == 0 && v.state == RESET && v.resets > 5) {
     splits = [];
@@ -880,6 +826,7 @@ var reset = function () {
   draw();
   _save();
 };
+
 var pause = function () {
   if (v.state == PAUSED) {
     var pausetime = new Date().getTime() - v.pausestart;
@@ -900,6 +847,7 @@ var pause = function () {
   updateTime();
   _save();
 };
+
 var ttime = function (time) {
   time = Math.abs(time);
   var s = (time / 1000) % 60;
@@ -923,6 +871,7 @@ var ttime = function (time) {
   }
   return newTime;
 };
+
 var centerSplit = function () {
   resizeSplits();
   var el = $(".split[data-id=" + v.n + "]");
@@ -956,6 +905,7 @@ var centerSplit = function () {
       { duration: 200, queue: false },
     );
 };
+
 var resizeSplits = function () {
   $("#container").height($(window).height());
   $("#container").width($(window).width());
@@ -964,6 +914,7 @@ var resizeSplits = function () {
     draw();
   }
 };
+
 var updateTime = function () {
   if (v.state == RUNNING) {
     v.time = new Date().getTime() - v.start;
@@ -975,6 +926,7 @@ var updateTime = function () {
     v.time = v.pausestart - v.start;
   }
 };
+
 var drawTime = function () {
   v.timer.html((v.time < 0 ? "-" : "") + ttime(v.time));
   if (v.time > 0 && splits[v.n]) {
@@ -995,6 +947,7 @@ var drawTime = function () {
     }
   }
 };
+
 var appendSplit = function (myname, mytime, myseg) {
   var id = $(".split").length;
   $("#splits").append(
@@ -1015,9 +968,8 @@ var appendSplit = function (myname, mytime, myseg) {
   v.diff = $(".diff:nth(" + v.n + ")");
   optionHandler["iconsize"]();
 };
-var rnd = function (num) {
-  return parseFloat(num.toFixed(3));
-};
+
+
 var importExport = function () {
   if (splits.length > 0) {
     exportWsplit();
@@ -1025,6 +977,7 @@ var importExport = function () {
     importWsplit();
   }
 };
+
 var exportWsplit = function () {
   var data =
     "Title=" +
@@ -1051,7 +1004,6 @@ var exportWsplit = function () {
 			extensions: ['wsplit']
 		}]
 	}).then(async (path) => { await writeTextFile({path: path, contents: data}) })
-    file.click();
   } else {
     var ex = document.createElement("a");
     ex.setAttribute(
@@ -1062,6 +1014,7 @@ var exportWsplit = function () {
     ex.click();
   }
 };
+
 var importWsplit = function () {
   var file = $('<input type="file" accept=".wsplit">');
   file.change(function () {
@@ -1083,6 +1036,7 @@ var importWsplit = function () {
       $("#attempts").html(options.attempts);
       splits = [];
       $("#splits").html("");
+	  let found;
       while ((found = reg.exec(reader.result))) {
         var newtime = 1000 * found[2];
         var newseg = 1000 * found[3];
@@ -1105,15 +1059,18 @@ var importWsplit = function () {
   });
   file.click();
 };
-var stored = JSON.parse(localStorage.options || "[]");
+
+let stored = JSON.parse(localStorage.options || "[]");
 for (var i in stored) {
   options[i] = clone(stored[i]);
 }
-var storedv = JSON.parse(localStorage.v || "[]");
+
+let storedv = JSON.parse(localStorage.v || "[]");
 for (var i in storedv) {
   v[i] = clone(storedv[i]);
 }
-var variableHandler = {
+
+let variableHandler = {
   state: function () {
     if (v.state == PAUSED) {
       $(".split:nth(" + v.n + ")").addClass("current");
@@ -1177,6 +1134,7 @@ var variableHandler = {
     if (v.state == RUNNING) drawTime();
   },
 };
+
 var splits = localStorage.splits ? JSON.parse(localStorage.splits) : [];
 if (splits.length == 0 && options.splits > 0) {
   for (var i = 0; i < options.splits; i++) {
@@ -1186,8 +1144,9 @@ if (splits.length == 0 && options.splits > 0) {
 for (var i in splits) {
   Object.observe(splits[i], splitHandler);
 }
+
 if (window.__TAURI__) {
-  /*
+  /* TODO: Figure out what of this I need to port
 	win.setAlwaysOnTop(options.ontop)
   if(!isNaN(Math.log(options.zoom)/Math.log(1.2))) {
     win.zoomLevel = Math.log(options.zoom)/Math.log(1.2)
@@ -1260,7 +1219,7 @@ if (window.__TAURI__) {
 
 */
 
-  var sock_path = false;
+  let sock_path = false;
   let osType = await type();
   console.log(osType);
   if (osType.match(/Linux|Darwin/gi)) {
@@ -1290,6 +1249,7 @@ if (window.__TAURI__) {
   })
 	*/
 }
+
 var buttonHandler = {
   buttonsave: function () {
     exportWsplit();
@@ -1325,6 +1285,7 @@ var buttonHandler = {
     undo();
   },
 };
+
 var gotoEnd = function (el) {
   var range, selection;
   if (document.createRange) {
@@ -1341,21 +1302,8 @@ var gotoEnd = function (el) {
     range.select();
   }
 };
-var getMs = function (time) {
-  time = time.replace(",", ".");
-  if (!time.match(/:/)) {
-    return 1000 * (parseFloat(time) || 0);
-  }
-  time = time.replace(/[^\d.:]*/gm, "");
-  var ms = 0;
-  time = time.split(":");
-  time.reverse();
-  var multi = [1000, 60 * 1000, 60 * 60 * 1000];
-  for (var i = time.length - 1; i >= 0; i--) {
-    ms += multi[i] * time[i];
-  }
-  return ms;
-};
+
+
 $(function () {
   v.timer = $("#timer");
   v.title = $("#title");
@@ -1492,6 +1440,8 @@ $(function () {
     _save();
     $("#timer").click();
   });
+
+	/* TODO PORT
   if (typeof win !== "undefined") {
     $(window).bind("mousewheel", function (e) {
       if (!e.ctrlKey) {
@@ -1506,6 +1456,8 @@ $(function () {
       }
     });
   }
+	*/
+		// TODO check if these Jquerys for $(window) are nwsplit dependent
   $(window).scroll(function () {
     $(window).scrollTop(0);
     $(window).scrollLeft(0);
@@ -1549,11 +1501,13 @@ $(function () {
     }
     _save();
   });
+	/* TODO ??? WTF does this do
   if (typeof win !== "undefined") {
     setTimeout(function () {
       win.width++;
       win.width--;
     }, 100);
   }
+	*/
   custom = $("#custom");
 });
