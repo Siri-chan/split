@@ -1,19 +1,19 @@
-export const clone = (obj) => {
+export const clone = (obj: any | any[]): any | any[] => {
   if (null == obj || "object" != typeof obj) return obj;
   if (obj instanceof Date) {
-    var copy = new Date();
+    let copy = new Date();
     copy.setTime(obj.getTime());
     return copy;
   }
   if (obj instanceof Array) {
-    var copy = [];
+    let copy: any[] = [];
     for (var i = 0, len = obj.length; i < len; i++) {
       copy[i] = clone(obj[i]);
     }
     return copy;
   }
   if (obj instanceof Object) {
-    var copy = {};
+    let copy = {};
     for (var attr in obj) {
       if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
     }
@@ -21,27 +21,54 @@ export const clone = (obj) => {
   }
 }
 
-export const parseBool = (bool) => {
+export const parseBool = (bool: any): boolean => {
   return !(bool == "false" || bool == 0 || bool == "0")
 };
 
-export const getMs = (time) => {
+export const getMs = (time: string) => {
+	// I think this is a localization hack.
   time = time.replace(",", ".");
+
+	// If time is < 1 min, we can just parse it as a float and mul by 1000. 
   if (!time.match(/:/)) {
     return 1000 * (parseFloat(time) || 0);
   }
+
+  // Otherwise, remove the : and . s from the time
+  // though i thing this regex actually just matches everything because of the `*`?
+  // should console.log this and like... check at some point
   time = time.replace(/[^\d.:]*/gm, "");
-  var ms = 0;
-  time = time.split(":");
-  time.reverse();
-  var multi = [1000, 60 * 1000, 60 * 60 * 1000];
-  for (var i = time.length - 1; i >= 0; i--) {
-    ms += multi[i] * time[i];
+
+  let ms = 0;
+
+  // This used to just be `time = time.split(...)`, but Typescript doesn't like that.
+  let time_arr = time.split(":");
+  time_arr.reverse();
+
+
+  for (let i = 0; i < time_arr.length; i++) {
+	ms += parseFloat(time_arr[i]) * 1000 * 
+		// Original code doesn't ever use a time measure above hours, so we just panic and throw out a NaN
+		(i<3 ? Math.pow(60, i) : NaN);
   }
+
+  /*
+	Old Code:
+
+  var multi = [1, 60, 60 * 60];
+  for (var i = time_arr.length - 1; i >= 0; i--) {
+	  console.log({
+		time_str: time_arr[i], ms: ms,
+	  })
+	  // This parse is also only required because Typescript
+    ms += 1000 * multi[i] * parseFloat(time_arr[i]);
+  }
+  */
+
   return ms;
 };
 
-export const keymap = {
+export const keymap: Record<string, number> = {
   backspace: 8,
   command: 91,
   tab: 9,
@@ -91,13 +118,13 @@ export const keymap = {
   "'": 222,
 };
 
-export const key = (name) => {
+export const key = (name: string): number => {
   return (
     keymap[String(name).toLowerCase()] ||
     String(name).toUpperCase().charCodeAt(0)
   );
 };
 
-export const rnd = (num) => {
+export const rnd = (num: number): number => {
   return parseFloat(num.toFixed(3));
 };

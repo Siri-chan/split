@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 
-import { clone, getMs, key, keymap, parseBool, rnd } from "@/util";
+import { clone, getMs, key, keymap, parseBool, rnd } from "./util";
 
 let defaults = {
   ontop: true,
