@@ -1,2 +1,4 @@
 /* Timer on bottom */
-#timer { order: 6 }
+#timer {
+	order: 6;
+}
