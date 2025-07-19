@@ -1,3 +1,5 @@
+/* eslint @typescript-eslint/no-explicit-any:0 */
+
 export const clone = (obj: any | any[]): any | any[] => {
 	if (null == obj || "object" != typeof obj) return obj;
 	if (obj instanceof Date) {
@@ -15,17 +17,21 @@ export const clone = (obj: any | any[]): any | any[] => {
 	if (obj instanceof Object) {
 		const copy = {};
 		for (const attr in obj) {
-			if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
+			if (Object.prototype.hasOwnProperty.call(obj, attr)) {
+				copy[attr] = clone(obj[attr]);
+			}
 		}
 		return copy;
 	}
+
+	return undefined;
 };
 
 export const parseBool = (bool: any): boolean => {
 	return !(bool == "false" || bool == 0 || bool == "0");
 };
 
-export const getMs = (time: string) => {
+export const getMs = (time: string): number => {
 	// I think this is a localization hack.
 	time = time.replace(",", ".");
 

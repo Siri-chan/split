@@ -1,6 +1,16 @@
 import { defineConfig } from "vite";
+import inject from '@rollup/plugin-inject';
 
 export default defineConfig({
+	plugins: [
+            inject({
+              $: 'jquery',
+              jQuery: 'jquery',
+            }),
+          ],
+          optimizeDeps: {
+            include: ['jquery'],
+          },
 	esbuild: { supported: { "top-level-await": true } },
 	// prevent vite from obscuring rust errors
 	clearScreen: false,

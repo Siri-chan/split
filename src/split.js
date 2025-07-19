@@ -5,6 +5,11 @@ import { listen } from "@tauri-apps/api/event";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 
+import "jquery";
+import $ from "jquery";
+import "jquery.flot";
+import "object.observe";
+
 import { clone, getMs, key, keymap, parseBool, rnd } from "./util";
 
 let defaults = {
@@ -294,9 +299,8 @@ const getIcon = n => {
 			$(".icon")[n].src = file[0].files[0].path;
 		} else {
 			reader.onloadend = function () {
-				data = reader.result;
-				splits[n].icon = data;
-				$(".icon")[n].src = data;
+				splits[n].icon = reader.result;
+				$(".icon")[n].src = reader.result;
 				_save();
 			};
 			reader.readAsDataURL(file[0].files[0]);
