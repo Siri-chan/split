@@ -1,8 +1,9 @@
-import { invoke } from "@tauri-apps/api";
-import { type, tempdir } from "@tauri-apps/api/os";
+import { invoke } from "@tauri-apps/api/core";
+import { type } from "@tauri-apps/plugin-os";
+import { tempDir } from "@tauri-apps/api/path";
 import { listen } from "@tauri-apps/api/event";
-import { writeTextFile } from "@tauri-apps/api/fs";
-import { save } from "@tauri-apps/api/dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { save } from "@tauri-apps/plugin-dialog";
 
 import { clone, getMs, key, keymap, parseBool, rnd } from "./util.js";
 
@@ -232,7 +233,7 @@ var optionHandler = {
   local_reset: function (o) {},
   local_undo: function (i) {},
 	/* TODO: Do we need these? Window is movable and resizable, and preserves size alr.
-	* Don"t know if Tauri exposes window stuff either...
+	* Don't know if Tauri exposes window stuff either...
   width: function (o) {
     if (typeof in !== "undefined") {
       win.width = o;
