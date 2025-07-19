@@ -5,7 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
 
-import { clone, getMs, key, keymap, parseBool, rnd } from "./util.js";
+import { clone, getMs, key, keymap, parseBool, rnd } from "@/util";
 
 let defaults = {
   ontop: true,
@@ -150,7 +150,7 @@ var optionHandler = {
       $(".name,.seg,.time").css("line-height", "16px").css("height", "auto");
     }
   },
-/* TODO: Port the global hotkeys ???
+/* TODO: Port the global hotkeys - Some WMs do this properly (anything X11, Plasma, maybe GNOME)
   global_split: function (o) {
     if (typeof gui !== "undefined") {
       gui.App.unregisterGlobalHotKey(v.shortcut_split);
@@ -271,11 +271,10 @@ var optionHandler = {
 
 const getCss = () => {
   var file = $('<input type="file" accept=".css">');
-  file.change(function () {
+  file.change(() => {
     var reader = new FileReader();
     reader.onloadend = function () {
-      data = reader.result;
-      options.css = data;
+      options.css = reader.result;
     };
     reader.readAsText(file[0].files[0]);
   });
