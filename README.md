@@ -1,10 +1,31 @@
 # nwsplit (pronounced "envy")
+
 ##### Cross platform speedrunning splitter/timer made for [nw.js](http://github.com/nwjs/nw.js) that runs on windows, linux and mac, and also in the browser and mobile devices.
 
 ##### You can test the basic functions in the [browser version](http://dregu.github.io/nwsplit/) or download [nwsplit.nw](http://dregu.github.io/nwsplit/nwsplit.nw) and [nw.js](http://nwjs.io) to run it on your PC with extra features and eyecandy.
 
-Styling can be done live in chrome developer tools or with custom css files. Options can be changed in the menu. Global and local hotkeys for [undo], [pause], [reset], [stop] and [split] ([CTRL+]F8..F12 by default, respectively). All hotkeys have multiple functions: [Stop] while already stopped updates splits and best segments with new records (hold to add crappy times too.) [Stop] with no splits adds some empty splits for editing. Holding [reset] clears everything. Basically the keys always map to the icons shown on the toolbar. With autoadd=false you only need the [split] key to start-split-stop-reset. You can edit splits, times and game title by clicking. Splits can be imported and exported as .wsplit. Current session and state is also autosaved in localStorage forever. You can even turn off your computer and the timer "keeps running".
+Styling can be done live in chrome developer tools or with custom css files.
+Options can be changed in the menu. Global and local hotkeys for [undo],
+[pause], [reset], [stop] and [split] ([CTRL+]F8..F12 by default, respectively).
+All hotkeys have multiple functions: [Stop] while already stopped updates splits
+and best segments with new records (hold to add crappy times too.) [Stop] with
+no splits adds some empty splits for editing. Holding [reset] clears everything.
+Basically the keys always map to the icons shown on the toolbar. With
+autoadd=false you only need the [split] key to start-split-stop-reset. You can
+edit splits, times and game title by clicking. Splits can be imported and
+exported as .wsplit. Current session and state is also autosaved in localStorage
+forever. You can even turn off your computer and the timer "keeps running".
 
-While this is meant for nw.js where it should work on windows, linux and mac, it also runs in chrome, firefox, internet explorer, safari, chrome for android, firefox mobile... On mobile it even works in the background. Running in nw.js gives you global hotkeys, menus, borderless resizable window, themes, and propably some other features.
+While this is meant for nw.js where it should work on windows, linux and mac, it
+also runs in chrome, firefox, internet explorer, safari, chrome for android,
+firefox mobile... On mobile it even works in the background. Running in nw.js
+gives you global hotkeys, menus, borderless resizable window, themes, and
+propably some other features.
 
-You can also send javascript commands to the unix socket at `/tmp/nwsplit.sock` or the named pipe at `\\.\pipe\nwsplit` on windows. Supported commands are split(), stop(), pause(), reset(), trash(), undo() and everything else you find in the source. Example: `$ echo "split()" | nc -U /tmp/nwsplit.sock` or `echo split() > \\.\pipe\nwsplit`. This is particularly helpful if the global hotkeys don't work on your system, and you can also use it to create autosplitters. Check examples/ for examples. Duh.
+You can also send javascript commands to the unix socket at `/tmp/nwsplit.sock`
+or the named pipe at `\\.\pipe\nwsplit` on windows. Supported commands are
+split(), stop(), pause(), reset(), trash(), undo() and everything else you find
+in the source. Example: `$ echo "split()" | nc -U /tmp/nwsplit.sock` or
+`echo split() > \\.\pipe\nwsplit`. This is particularly helpful if the global
+hotkeys don't work on your system, and you can also use it to create
+autosplitters. Check examples/ for examples. Duh.
