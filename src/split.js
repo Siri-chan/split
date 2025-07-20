@@ -7,6 +7,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import "jquery";
 import $ from "jquery";
 import "jquery.flot";
+
 import "object.observe";
 
 import { clone, getMs, key, parseBool, rnd } from "./util";
