@@ -1,4 +1,3 @@
-src/lib/*.js
 src-tauri
 css/font-awesome*
 pnpm-lock.yaml

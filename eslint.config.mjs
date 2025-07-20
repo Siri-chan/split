@@ -14,7 +14,7 @@ export default defineConfig([
 		files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
 		languageOptions: { globals: globals.browser }
 	},
-	globalIgnores(["src/lib/*", "src-tauri"]),
+	globalIgnores(["src-tauri"]),
 	tseslint.configs.recommended,
 	{
 		rules: {

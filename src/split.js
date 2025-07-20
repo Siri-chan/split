@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { type } from "@tauri-apps/plugin-os";
-import { tempDir } from "@tauri-apps/api/path";
 import { listen } from "@tauri-apps/api/event";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { save } from "@tauri-apps/plugin-dialog";
@@ -10,42 +9,16 @@ import $ from "jquery";
 import "jquery.flot";
 import "object.observe";
 
-import { clone, getMs, key, keymap, parseBool, rnd } from "./util";
+import { clone, getMs, key, parseBool, rnd } from "./util";
 
-let defaults = {
-	ontop: true,
-	precision: 1,
-	trim: true,
-	offset: 0,
-	interval: 100,
-	drawinterval: 100,
-	autoadd: false,
-	autosave: true,
-	title: "Game title",
-	attempts: 0,
-	splits: 0,
-	graph: true,
-	toolbar: true,
-	iconsize: "32",
-	icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAZiS0dEAAAAAAAA+UO7fwAAASRJREFUWIXlls0OwiAQhD+Mifaiz9gn6zPqpfa0HqARkP+qNHFODd1dprMDW/h3qA258olahw0EPoIW1gIgAixm5QTqVamq5rGBgMYC3M3zpblK/xZ0J1DTL7f3NytbgCtNXqj3wLr51VsPrX2FAHojdXaX5JHNCt4b3T1QosB772NS34wS2gvOF0/TxDzPAAzDwDiOAjUKrOc+ZS1lYpZETCAlB63AA+fiCXog/N4+K297d/dAioAAIuJ9XQnuOkfkVcd6q7CUzytg3/k1KPRC+zCqR9Bv3T0QYuWe+5j8/ghOxSVmRFyB1t77yHihzQO5e6ACu/JAfN77WOe/jZL4gBfiBL6BEgI/xD5mQfk0NPok/vlK4xx0V6AG/lTbGgfsQIEnrwNkcZmOLQwAAAAASUVORK5CYII=",
-	history: 10,
-	global_split: "Ctrl+F12",
-	global_stop: "Ctrl+F11",
-	global_reset: "Ctrl+F10",
-	global_pause: "Ctrl+F9",
-	global_undo: "Ctrl+F8",
-	local_split: "F12",
-	local_stop: "F11",
-	local_reset: "F10",
-	local_pause: "F9",
-	local_undo: "F8",
-	width: 320,
-	height: 720,
-	x: 300,
-	y: 300,
-	zoom: 1,
-	css: ""
-};
+import {
+	optionDefaults,
+	optionHelp as help,
+	loadCss,
+	options,
+	setOption,
+	setOptions
+} from "./options";
 
 const RESET = 0,
 	RUNNING = 1,
@@ -69,7 +42,7 @@ let v = {
 
 let custom = null;
 
-var options = clone(defaults);
+// TODO: Modify these to use setOption()
 var optionHandler = {
 	/* TODO: Port always-on-top
 	ontop: function (o) {
@@ -267,46 +240,17 @@ var optionHandler = {
 	*/
 	zoom: function (o) {
 		options.zoom = parseFloat(o) || 1;
+		/* TODO: Port zoomLevel
 		if (typeof win !== "undefined") {
 			if (!isNaN(Math.log(options.zoom) / Math.log(1.2))) {
 				win.zoomLevel = Math.log(options.zoom) / Math.log(1.2);
 			}
 		}
+		*/
 	},
 	css: function (o) {
 		$("style").html(o);
 	}
-};
-
-const getCss = () => {
-	var file = $('<input type="file" accept=".css">');
-	file.change(() => {
-		var reader = new FileReader();
-		reader.onloadend = function () {
-			options.css = reader.result;
-		};
-		reader.readAsText(file[0].files[0]);
-	});
-	file.click();
-};
-
-const getIcon = n => {
-	var file = $('<input type="file" accept="image/*">');
-	file.change(function () {
-		var reader = new FileReader();
-		if (file[0].files[0].path) {
-			splits[n].icon = file[0].files[0].path;
-			$(".icon")[n].src = file[0].files[0].path;
-		} else {
-			reader.onloadend = function () {
-				splits[n].icon = reader.result;
-				$(".icon")[n].src = reader.result;
-				_save();
-			};
-			reader.readAsDataURL(file[0].files[0]);
-		}
-	});
-	file.click();
 };
 
 var plotopt = {
@@ -408,7 +352,7 @@ var draw = function () {
 		return;
 	}
 	if (!options.graph || $("#graph").is(":hidden")) {
-		options.graph = false;
+		setOption("graph", false);
 	}
 	if (v.state == PAUSED || splits.length == 0 || !options.graph) {
 		return;
@@ -495,7 +439,7 @@ var editOptions = function () {
 				val = false;
 			}
 			if (val !== options[i]) {
-				options[key] = val;
+				setOption(key, val);
 			}
 		});
 		$("#options").hide();
@@ -505,31 +449,6 @@ var editOptions = function () {
 		if (options.toolbar) $("#bar").show();
 		return;
 	}
-	var help = {
-		ontop: "Always on top, boolean",
-		zoom: "Zoom level, 0.1 .. 5",
-		precision: "Number of decimals, 0 .. 3",
-		trim: "Trim leading zeroes, boolean",
-		interval: "Timer update interval, ms",
-		drawinterval: "Graph update interval, ms",
-		autoadd: "Automatically add new splits, boolean",
-		autosave: "Automatically save personal best and best segments on reset",
-		offset: "Timer start offset, ms",
-		splits: "Number of empty splits to create by default",
-		graph: "Show the graph, boolean",
-		toolbar: "Show the toolbar, boolean",
-		iconsize: "Split icon size, px",
-		global_split: "Global hotkey: Start / Split",
-		global_stop: "Global hotkey: Stop / Save times",
-		global_reset: "Global hotkey: Reset / Clear (hold)",
-		global_pause: "Global hotkey: Pause / Options",
-		global_undo: "Global hotkey: Undo / Import / Export",
-		local_split: "Local hotkey: Start / Split",
-		local_stop: "Local hotkey: Stop / Save times",
-		local_reset: "Local hotkey: Reset / Clear (hold)",
-		local_pause: "Local hotkey: Pause / Options",
-		local_undo: "Local hotkey: Undo / Import / Export"
-	};
 	$("#options").html("");
 	$("#options").append(
 		'<div class="help">Hover over a setting for help.</div>'
@@ -539,13 +458,13 @@ var editOptions = function () {
 			'<div class="option"><span class="variable" title="' +
 				help[i] +
 				" (default: " +
-				defaults[i] +
+				optionDefaults[i] +
 				')">' +
 				i +
 				':</span><span class="value" contenteditable="true" title="' +
 				help[i] +
 				" (default: " +
-				defaults[i] +
+				optionDefaults[i] +
 				')" data-key="' +
 				i +
 				'">' +
@@ -560,6 +479,7 @@ var editOptions = function () {
 	$("#titlerow").hide();
 	$("#splits").hide();
 	$("#options").show();
+	/* TODO Port Resizing to previous size.
 	if (typeof win !== "undefined") {
 		var optheight = parseInt(
 			($("#timer").height() +
@@ -574,16 +494,17 @@ var editOptions = function () {
 			win.width = 200;
 		}
 	}
+	*/
 };
 
 var _save = function () {
 	localStorage.splits = JSON.stringify(splits);
-	options.css = $("style").html();
+	setOption("css", $("style").html());
 	/* TODO: Do I need to port these settings?
 	if (typeof win !== "undefined") {
     options.width = win.width;
     options.height = win.height;
-    options.x = win.x;
+    options.x "= win.x;
     options.y = win.y;
   }
 	*/
@@ -630,7 +551,7 @@ var split = function () {
 	} else if (v.state == RESET) {
 		v.start = new Date().getTime() - (parseInt(options.offset) || 0);
 		v.n = 0;
-		options.attempts++;
+		setOption("attempts", options.attempts + 1);
 		v.inter = setInterval(updateTime, options.interval);
 		v.drawinter = setInterval(draw, options.drawinterval);
 		v.state = RUNNING;
@@ -1036,9 +957,9 @@ var importWsplit = function () {
 				return;
 			}
 			var meta = metareg.exec(reader.result);
-			options.title = meta[1];
+			setOptions("title", meta[1]);
 			$("#title").html(options.title);
-			options.attempts = parseInt(meta[2]) || 0;
+			setOption("attempts", parseInt(meta[2]) || 0);
 			$("#attempts").html(options.attempts);
 			splits = [];
 			$("#splits").html("");
@@ -1066,10 +987,25 @@ var importWsplit = function () {
 	file.click();
 };
 
-let stored = JSON.parse(localStorage.options || "[]");
-for (var i in stored) {
-	options[i] = clone(stored[i]);
-}
+// NOTE: This only affects individual splits, and not `options.icon`.
+const loadIcon = splitNumber => {
+	const file = $('<input type="file" accept="image/*">');
+	file.change(function () {
+		var reader = new FileReader();
+		if (file[0].files[0].path) {
+			splits[splitNumber].icon = file[0].files[0].path;
+			$(".icon")[splitNumber].src = file[0].files[0].path;
+		} else {
+			reader.onloadend = function () {
+				splits[splitNumber].icon = reader.result;
+				$(".icon")[splitNumber].src = reader.result;
+				_save();
+			};
+			reader.readAsDataURL(file[0].files[0]);
+		}
+	});
+	file.click();
+};
 
 let storedv = JSON.parse(localStorage.v || "[]");
 for (var i in storedv) {
@@ -1212,9 +1148,9 @@ if (window.__TAURI__) {
   menu.items[8].click = function() { undo() }
   menu.items[9].click = function() { addSplit(true) }
   menu.items[11].click = function() { editOptions() }
-  menu.items[12].click = function() { getCss() }
+  menu.items[12].click = function() { loadCss() }
   menu.items[13].click = function() { $('style').html(''); save() }
-  menu.items[14].click = function() { localStorage.clear; for(var i in defaults) {options[i] = clone(defaults[i])} }
+  menu.items[14].click = function() { localStorage.clear; for(var i in optionDefaults) {options[i] = clone(optiooptionDDefaults[i])} }
   menu.items[15].click = function() { options.graph = !options.graph }
   menu.items[16].click = function() { options.toolbar = !options.toolbar }
   menu.items[17].click = function() { win.showDevTools() }
@@ -1392,7 +1328,7 @@ $(function () {
 		}
 	);
 	$("#splits").on("click", ".icon", function () {
-		getIcon($(this).parents(".split").attr("data-id"));
+		loadIcon($(this).parents(".split").attr("data-id"));
 	});
 	$("#splits").on("click", function (e) {
 		if ($(e.target).attr("contenteditable") != "true") {
@@ -1513,13 +1449,5 @@ $(function () {
 		}
 		_save();
 	});
-	/* TODO ??? WTF does this do
-  if (typeof win !== "undefined") {
-    setTimeout(function () {
-      win.width++;
-      win.width--;
-    }, 100);
-  }
-	*/
 	custom = $("#custom");
 });
