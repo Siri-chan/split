@@ -10,7 +10,7 @@ import "jquery.flot";
 
 import "object.observe";
 
-import { clone, getMs, key, parseBool, rnd } from "./util";
+import { clone, getMs, key, parseBool, rnd, ttime } from "./util";
 
 import {
 	optionDefaults,
@@ -21,7 +21,8 @@ import {
 	setOptions
 } from "./options";
 
-const RESET = 0,
+// TODO: Replace this with a string union
+export const RESET = 0,
 	RUNNING = 1,
 	PAUSED = 2,
 	STOPPED = 3;
@@ -43,8 +44,8 @@ let v = {
 
 let custom = null;
 
-// TODO: Modify these to use setOption()
-var optionHandler = {
+// TODO: Turn these into proper setters
+const optionHandler = {
 	/* TODO: Port always-on-top
 	ontop: function (o) {
     options.ontop = parseBool(o);
@@ -53,87 +54,6 @@ var optionHandler = {
     }
   },
 	*/
-	precision: function (o) {
-		options.precision = parseInt(options.precision) || 1;
-		if (options.precision < 0 || options.precision > 3) {
-			options.precision = 1;
-		}
-		for (var i in splits) {
-			$(".split[data-id=" + i + "] .seg").html(ttime(splits[i].bestseg));
-			$(".split[data-id=" + i + "] .time").html(ttime(splits[i].best));
-		}
-		v.timer.html(ttime(v.time));
-	},
-	offset: function (o) {
-		options.offset = parseInt(options.offset) || 0;
-		if (v.state == RESET || v.state == STOPPED) {
-			$("#timer").html(ttime(options.offset));
-		}
-	},
-	splits: function (o) {
-		options.splits = parseInt(options.splits) || 0;
-	},
-	interval: function (o) {
-		options.interval = parseInt(options.interval) || 100;
-	},
-	drawinterval: function (o) {
-		options.drawinterval = parseInt(options.drawinterval) || 100;
-	},
-	autoadd: function (o) {
-		options.autoadd = parseBool(o);
-	},
-	autosave: function (o) {
-		options.autosave = parseBool(o);
-	},
-	trim: function (o) {
-		options.trim = parseBool(o);
-		if (v.state == RESET || v.state == STOPPED) {
-			$("#timer").html(ttime(options.offset));
-		}
-	},
-	title: function (o) {
-		if (v.title) v.title.html(o);
-	},
-	attempts: function (o) {
-		options.attempts = parseInt(o) || 0;
-		if (v.attempts) v.attempts.html(o);
-	},
-	graph: function (o) {
-		options.graph = parseBool(o);
-		if (options.graph) {
-			$("#graph").slideDown(function () {
-				if (v.plot) {
-					v.plot.resize();
-				}
-				v.drawinter = setInterval(draw, options.drawinterval);
-			});
-		} else {
-			clearInterval(v.drawinter);
-			v.drawinter = 0;
-			$("#graph").slideUp();
-		}
-	},
-	toolbar: function (o) {
-		options.toolbar = parseBool(o);
-		if (!window.__TAURI__) return;
-		if (options.toolbar) {
-			$("#bar").slideDown();
-		} else {
-			$("#bar").slideUp();
-		}
-	},
-	iconsize: function (o) {
-		$(".icon").height(options.iconsize).width(options.iconsize);
-		if (options.iconsize > 16) {
-			$(".name,.seg,.time")
-				.css("line-height", options.iconsize + "px")
-				.css("height", options.iconsize + "px");
-		} else {
-			$(".name,.seg,.time")
-				.css("line-height", "16px")
-				.css("height", "auto");
-		}
-	},
 	/* TODO: Port the global hotkeys - Some WMs do this properly (anything X11, Plasma, maybe GNOME)
   global_split: function (o) {
     if (typeof gui !== "undefined") {
@@ -211,11 +131,6 @@ var optionHandler = {
     }
   },
 	*/
-	local_split: function (o) {},
-	local_stop: function (o) {},
-	local_pause: function (o) {},
-	local_reset: function (o) {},
-	local_undo: function (i) {},
 	/* TODO: Do we need these? Window is movable and resizable, and preserves size alr.
 	* Don't know if Tauri exposes window stuff either...
   width: function (o) {
@@ -248,9 +163,6 @@ var optionHandler = {
 			}
 		}
 		*/
-	},
-	css: function (o) {
-		$("style").html(o);
 	}
 };
 
@@ -346,14 +258,14 @@ var updateStaticSegments = function () {
 	}
 };
 
-var draw = function () {
+export const draw = function () {
 	if (!options.graph) {
 		clearInterval(v.drawinter);
 		v.drawinter = 0;
 		return;
 	}
 	if (!options.graph || $("#graph").is(":hidden")) {
-		setOption("graph", false);
+		setOption.graph(false, v);
 	}
 	if (v.state == PAUSED || splits.length == 0 || !options.graph) {
 		return;
@@ -775,30 +687,6 @@ var pause = function () {
 	_save();
 };
 
-var ttime = function (time) {
-	time = Math.abs(time);
-	var s = (time / 1000) % 60;
-	var m = Math.floor((time / (1000 * 60)) % 60);
-	var h = Math.floor((time / (1000 * 60 * 60)) % 24);
-	var newTime =
-		h +
-		":" +
-		m +
-		":" +
-		(options.precision ? s.toFixed(options.precision) : Math.floor(s));
-	if (options.trim) {
-		newTime = newTime.replace(/^([0:]*(?!\.))/, "");
-	}
-	newTime = newTime.replace(/(:(?=\d(?!\d)))/g, ":0");
-	if (options.precision) {
-		newTime = newTime.replace(".", "<span>.") + "</span>";
-	}
-	if (newTime == "") {
-		newTime = "0";
-	}
-	return newTime;
-};
-
 var centerSplit = function () {
 	resizeSplits();
 	var el = $(".split[data-id=" + v.n + "]");
@@ -1080,7 +968,7 @@ let variableHandler = {
 	}
 };
 
-var splits = localStorage.splits ? JSON.parse(localStorage.splits) : [];
+export let splits = localStorage.splits ? JSON.parse(localStorage.splits) : [];
 if (splits.length == 0 && options.splits > 0) {
 	for (var i = 0; i < options.splits; i++) {
 		addSplit(true);

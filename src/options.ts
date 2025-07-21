@@ -1,4 +1,9 @@
-import { clone } from "./util";
+/* eslint @typescript-eslint/no-explicit-any:0 */
+
+import { splits, draw, RESET, STOPPED } from "./split";
+import { clone, ttime } from "./util";
+
+import type { Result } from "./result";
 
 // NOTE: These are stored in localStorage right now but it might be worth moving it.
 interface Options {
@@ -117,7 +122,170 @@ export const optionHelp: Record<string, string> = {
 	local_undo: "Local hotkey: Undo / Import / Export"
 };
 
-export const setOption = (key: string, value: string | number | boolean) => {
+// NOTE: Passing in `v` is fine because it's an object so it's passed by reference.
+export const setOption: Record<
+	string,
+	(value: string | number | boolean, v?: any) => Result<void, string>
+> = {
+	precision: (value, v) => {
+		if (!v) return { err: "v not passed to setOption.precision()" };
+		if (typeof value != "number")
+			return {
+				err: "setOption.precision() called with incorrect value type"
+			};
+
+		_setOption("precision", Math.round(value));
+		if (options.precision < 0 || options.precision > 3) {
+			_setOption("precision", 1);
+		}
+		for (const i in splits) {
+			$(".split[data-id=" + i + "] .seg").html(ttime(splits[i].bestseg));
+			$(".split[data-id=" + i + "] .time").html(ttime(splits[i].best));
+		}
+		v.timer.html(ttime(v.time));
+		return { ok: undefined };
+	},
+	offset: (value, v) => {
+		if (!v) return { err: "v not passed to setOption.offset()" };
+		if (typeof value != "number")
+			return {
+				err: "setOption.offset() called with incorrect value type"
+			};
+
+		_setOption("offset", Math.round(value));
+		if (v.state == RESET || v.state == STOPPED) {
+			$("#timer").html(ttime(options.offset));
+		}
+		return { ok: undefined };
+	},
+	splits: value => {
+		if (typeof value != "number")
+			return {
+				err: "setOption.splits() called with incorrect value type"
+			};
+		return { ok: _setOption("splits", Math.round(value)) };
+	},
+	interval: value => {
+		if (typeof value != "number")
+			return {
+				err: "setOption.interval() called with incorrect value type"
+			};
+		return { ok: _setOption("interval", Math.round(value)) };
+	},
+	drawinterval: value => {
+		if (typeof value != "number")
+			return {
+				err: "setOption.drawinterval() called with incorrect value type"
+			};
+		return { ok: _setOption("drawinterval", Math.round(value)) };
+	},
+	autoadd: value => {
+		return { ok: _setOption("autoadd", value) };
+	},
+	autosave: value => {
+		return { ok: _setOption("autosave", value) };
+	},
+	trim: (value, v) => {
+		if (!v) return { err: "v not passed to setOption.trim()" };
+		if (typeof value != "boolean")
+			return { err: "setOption.trim() called with incorrect value type" };
+		_setOption("trim", value);
+		if (v.state == RESET || v.state == STOPPED) {
+			$("#timer").html(ttime(options.offset));
+		}
+		return { ok: undefined };
+	},
+	title: function (value, v) {
+		if (!v) return { err: "v not passed to setOption.title()" };
+		if (typeof value != "string")
+			return {
+				err: "setOption.title() called with incorrect value type"
+			};
+		_setOption("title", value);
+
+		if (v.title) v.title.html(value);
+		return { ok: undefined };
+	},
+	attempts: function (value, v) {
+		if (!v) return { err: "v not passed to setOption.attempts()" };
+		_setOption("attempts", value);
+		if (v.attempts) v.attempts.html(value);
+		return { ok: undefined };
+	},
+	graph: function (value, v) {
+		if (!v) return { err: "v not passed to setOption.graph()" };
+		if (typeof value != "boolean")
+			return { err: "setOption.trim() called with incorrect value type" };
+
+		_setOption("graph", value);
+
+		if (options.graph) {
+			$("#graph").slideDown(function () {
+				if (v.plot) {
+					v.plot.resize();
+				}
+				v.drawinter = setInterval(draw, options.drawinterval);
+			});
+		} else {
+			clearInterval(v.drawinter);
+			v.drawinter = 0;
+			$("#graph").slideUp();
+		}
+		return { ok: undefined };
+	},
+	toolbar: function (value) {
+		_setOption("toolbar", value);
+		// @ts-expect-error __TAURI__ is set when in Tauri, but TS doesn't see the variable being injected.
+		if (!window.__TAURI__) return { ok: undefined };
+		if (options.toolbar) {
+			$("#bar").slideDown();
+		} else {
+			$("#bar").slideUp();
+		}
+		return { ok: undefined };
+	},
+	iconsize: value => {
+		if (typeof value != "number")
+			return {
+				err: "setOption.iconsize() called with incorrect value type"
+			};
+		$(".icon").height(options.iconsize).width(options.iconsize);
+		if (options.iconsize > 16) {
+			$(".name,.seg,.time")
+				.css("line-height", String(options.iconsize) + "px")
+				.css("height", String(options.iconsize) + "px");
+		} else {
+			$(".name,.seg,.time")
+				.css("line-height", "16px")
+				.css("height", "auto");
+		}
+		return { ok: undefined };
+	},
+	css: function (value) {
+		if (typeof value != "string")
+			return { err: "setOption.css() called with incorrect value type" };
+		_setOption("css", value);
+		$("style").html(options.css);
+		return { ok: undefined };
+	},
+	local_split: value => {
+		return { ok: _setOption("local_split", value) };
+	},
+	local_stop: value => {
+		return { ok: _setOption("local_stop", value) };
+	},
+	local_pause: value => {
+		return { ok: _setOption("local_pause", value) };
+	},
+	local_reset: value => {
+		return { ok: _setOption("local_reset", value) };
+	},
+	local_undo: value => {
+		return { ok: _setOption("local_undo", value) };
+	}
+};
+
+export const _setOption = (key: string, value: string | number | boolean) => {
 	if (typeof options[key] == typeof value) {
 		options[key] = value;
 		return;
