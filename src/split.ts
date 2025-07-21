@@ -334,6 +334,7 @@ export const draw = function () {
 	v.plot.draw();
 };
 
+// TODO setup the option buttons properly
 var editOptions = function () {
 	if ($("#options").is(":visible")) {
 		$("#options .value").each(function () {
@@ -352,7 +353,7 @@ var editOptions = function () {
 				val = false;
 			}
 			if (val !== options[i]) {
-				setOption(key, val);
+				setOption[key](val, v);
 			}
 		});
 		$("#options").hide();
@@ -410,9 +411,9 @@ var editOptions = function () {
 	*/
 };
 
-var _save = function () {
+export const _save = function () {
 	localStorage.splits = JSON.stringify(splits);
-	setOption("css", $("style").html());
+	setOption.css($("style").html());
 	/* TODO: Do I need to port these settings?
 	if (typeof win !== "undefined") {
     options.width = win.width;
@@ -464,7 +465,7 @@ var split = function () {
 	} else if (v.state == RESET) {
 		v.start = new Date().getTime() - (parseInt(options.offset) || 0);
 		v.n = 0;
-		setOption("attempts", options.attempts + 1);
+		setOption.attempts(options.attempts + 1, v);
 		v.inter = setInterval(updateTime, options.interval);
 		v.drawinter = setInterval(draw, options.drawinterval);
 		v.state = RUNNING;
@@ -784,7 +785,7 @@ var appendSplit = function (myname, mytime, myseg) {
 	$("#buttonload").hide();
 	$("#buttonsave").show();
 	v.diff = $(".diff:nth(" + v.n + ")");
-	optionHandler["iconsize"]();
+	setOption.iconSize(options.iconsize);
 };
 
 var importExport = function () {
@@ -846,9 +847,9 @@ var importWsplit = function () {
 				return;
 			}
 			var meta = metareg.exec(reader.result);
-			setOptions("title", meta[1]);
+			setOption.title(meta[1]);
 			$("#title").html(options.title);
-			setOption("attempts", parseInt(meta[2]) || 0);
+			setOption.attempts(parseInt(meta[2]) || 0);
 			$("#attempts").html(options.attempts);
 			splits = [];
 			$("#splits").html("");
@@ -896,7 +897,7 @@ const loadIcon = splitNumber => {
 	file.click();
 };
 
-let storedv = JSON.parse(localStorage.v || "[]");
+let storedv = JSON.parse(localStorage.v || "{}");
 for (var i in storedv) {
 	v[i] = clone(storedv[i]);
 }
@@ -1084,39 +1085,19 @@ if (window.__TAURI__) {
 }
 
 var buttonHandler = {
-	buttonsave: function () {
-		exportWsplit();
-	},
-	buttonload: function () {
-		importWsplit();
-	},
-	buttonreset: function () {
-		reset();
-	},
-	buttonclear: function () {
-		trash();
-	},
-	buttonpause: function () {
-		pause();
-	},
-	buttonoptions: function () {
-		editOptions();
-	},
-	buttonadd: function () {
-		stop();
-	},
-	buttonstop: function () {
-		stop();
-	},
-	buttontimes: function () {
-		stop();
-	},
-	buttonsplit: function () {
-		split();
-	},
-	buttonundo: function () {
-		undo();
-	}
+	buttonsave: exportWsplit,
+	buttonload: importWsplit,
+	buttonreset: reset,
+	buttonclear: trash,
+	buttonpause: pause,
+	buttonoptions: editOptions,
+	// NOTE: Why these are all `stop` is beyond me - maybe lots of ctrl+cv
+	buttonadd: 	stop,
+	buttonstop: stop,
+	buttontimes: stop,
+
+	buttonsplit: split,
+	buttonundo: undo
 };
 
 var gotoEnd = function (el) {
@@ -1329,14 +1310,6 @@ $(function () {
 				variableHandler[c[i].name]();
 			}
 		}
-	});
-	Object.observe(options, function (c) {
-		for (var i in c) {
-			if (optionHandler[c[i].name]) {
-				optionHandler[c[i].name](options[c[i].name]);
-			}
-		}
-		_save();
 	});
 	custom = $("#custom");
 });

@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/no-explicit-any:0 */
 
-import { splits, draw, RESET, STOPPED } from "./split";
+import { splits, draw, _save, RESET, STOPPED } from "./split";
 import { clone, ttime } from "./util";
 
 import type { Result } from "./result";
@@ -288,6 +288,7 @@ export const setOption: Record<
 export const _setOption = (key: string, value: string | number | boolean) => {
 	if (typeof options[key] == typeof value) {
 		options[key] = value;
+		_save()
 		return;
 	}
 
@@ -305,9 +306,11 @@ export const _setOption = (key: string, value: string | number | boolean) => {
 export const setOptions = (opts?: Options) => {
 	if (opts) {
 		options = opts;
+		_save()
 		return;
 	}
 	options = optionDefaults;
+	_save()
 	return;
 };
 
