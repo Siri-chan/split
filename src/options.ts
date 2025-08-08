@@ -1,7 +1,11 @@
 /* eslint @typescript-eslint/no-explicit-any:0 */
 
+import { getCurrentWindow } from '@tauri-apps/api/window';
+
 import { splits, draw, _save, RESET, STOPPED } from "./split";
-import { clone, ttime } from "./util";
+import { clone } from "./util";
+
+import { ttime } from './util/ttime';
 
 import type { Result } from "./result";
 
@@ -21,7 +25,7 @@ interface Options {
 	graph: boolean;
 	toolbar: boolean;
 	// TODO: This was stringified before - double check this works as `number`
-	iconsize: number;
+	iconSize: number;
 	// NOTE: This particularly expects a base64 string - maybe I should create a type Base64String that is just string for clarity?
 	icon: string;
 	history: number;
@@ -61,7 +65,7 @@ export const optionDefaults: Options = {
 	splits: 0,
 	graph: true,
 	toolbar: true,
-	iconsize: 32,
+	iconSize: 32,
 	// NOTE: Prettier will try to format this into sentence case, which is bad.
 	icon:
 		// prettier-ignore
@@ -127,6 +131,19 @@ export const setOption: Record<
 	string,
 	(value: string | number | boolean, v?: any) => Result<void, string>
 > = {
+	/*
+	ontop: function (value) {
+		if (typeof value != "boolean")
+			return {
+				err: "setOption.precision() called with incorrect value type"
+			};
+		
+		_setOption("ontop", value);
+		if (window.__TAURI__) {
+			return getCurrentWindow().setAlwaysOnTop(options.ontop);
+		}
+	},
+	*/
 	precision: (value, v) => {
 		if (!v) return { err: "v not passed to setOption.precision()" };
 		if (typeof value != "number")
@@ -244,16 +261,16 @@ export const setOption: Record<
 		}
 		return { ok: undefined };
 	},
-	iconsize: value => {
+	iconSize: value => {
 		if (typeof value != "number")
 			return {
-				err: "setOption.iconsize() called with incorrect value type"
+				err: "setOption.iconSize() called with incorrect value type"
 			};
-		$(".icon").height(options.iconsize).width(options.iconsize);
-		if (options.iconsize > 16) {
+		$(".icon").height(options.iconSize).width(options.iconSize);
+		if (options.iconSize > 16) {
 			$(".name,.seg,.time")
-				.css("line-height", String(options.iconsize) + "px")
-				.css("height", String(options.iconsize) + "px");
+				.css("line-height", String(options.iconSize) + "px")
+				.css("height", String(options.iconSize) + "px");
 		} else {
 			$(".name,.seg,.time")
 				.css("line-height", "16px")
@@ -288,7 +305,9 @@ export const setOption: Record<
 export const _setOption = (key: string, value: string | number | boolean) => {
 	if (typeof options[key] == typeof value) {
 		options[key] = value;
-		_save()
+		// We infinitely recurse if setting css.
+		if (key !== "css")
+			_save()
 		return;
 	}
 
@@ -332,3 +351,4 @@ export const loadCss = () => {
 
 	file.trigger("click");
 };
+

@@ -10,7 +10,7 @@ import "jquery.flot";
 
 import "object.observe";
 
-import { clone, getMs, key, parseBool, rnd, ttime } from "./util";
+import { clone, getMs, key, parseBool, rnd } from "./util";
 
 import {
 	optionDefaults,
@@ -20,6 +20,8 @@ import {
 	setOption,
 	setOptions
 } from "./options";
+
+import { ttime } from "./util/ttime";
 
 // TODO: Replace this with a string union
 export const RESET = 0,
@@ -46,14 +48,6 @@ let custom = null;
 
 // TODO: Turn these into proper setters
 const optionHandler = {
-	/* TODO: Port always-on-top
-	ontop: function (o) {
-    options.ontop = parseBool(o);
-    if (typeof win !== "undefined") {
-      win.setAlwaysOnTop(options.ontop);
-    }
-  },
-	*/
 	/* TODO: Port the global hotkeys - Some WMs do this properly (anything X11, Plasma, maybe GNOME)
   global_split: function (o) {
     if (typeof gui !== "undefined") {
@@ -463,7 +457,7 @@ var split = function () {
 		pause();
 		return;
 	} else if (v.state == RESET) {
-		v.start = new Date().getTime() - (parseInt(options.offset) || 0);
+		v.start = new Date().getTime() - (Math.floor(options.offset) || 0);
 		v.n = 0;
 		setOption.attempts(options.attempts + 1, v);
 		v.inter = setInterval(updateTime, options.interval);
@@ -740,7 +734,7 @@ var updateTime = function () {
 	} else if (v.state == STOPPED) {
 		v.time = v.stop - v.start;
 	} else if (v.state == RESET) {
-		v.time = parseInt(options.offset) || 0;
+		v.time = Math.floor(options.offset) || 0;
 	} else if (v.state == PAUSED) {
 		v.time = v.pausestart - v.start;
 	}
@@ -785,7 +779,7 @@ var appendSplit = function (myname, mytime, myseg) {
 	$("#buttonload").hide();
 	$("#buttonsave").show();
 	v.diff = $(".diff:nth(" + v.n + ")");
-	setOption.iconSize(options.iconsize);
+	setOption.iconSize(options.iconSize);
 };
 
 var importExport = function () {
@@ -970,14 +964,18 @@ let variableHandler = {
 };
 
 export let splits = localStorage.splits ? JSON.parse(localStorage.splits) : [];
-if (splits.length == 0 && options.splits > 0) {
-	for (var i = 0; i < options.splits; i++) {
-		addSplit(true);
+// delay so that `options` gets properly initialised - breaking a dependency loop that i can't find.
+setTimeout(()=> {
+	if (splits.length == 0 && options.splits > 0) {
+		for (var i = 0; i < options.splits; i++) {
+			addSplit(true);
+		}
 	}
-}
-for (var i in splits) {
-	Object.observe(splits[i], splitHandler);
-}
+	for (var i in splits) {
+		Object.observe(splits[i], splitHandler);
+	}
+}, 100);
+
 
 if (window.__TAURI__) {
 	/* TODO: Figure out what of this I need to port
@@ -1124,7 +1122,7 @@ $(function () {
 	if (!options.graph) {
 		$("#graph").hide();
 	}
-	if (!options.toolbar && typeof win !== "undefined") {
+	if (!options.toolbar && window.__TAURI__) {
 		$("#bar").hide();
 	}
 	v.title.html(options.title);
