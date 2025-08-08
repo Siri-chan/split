@@ -131,7 +131,6 @@ export const setOption: Record<
 	string,
 	(value: string | number | boolean, v?: any) => Result<void, string>
 > = {
-	/*
 	ontop: function (value) {
 		if (typeof value != "boolean")
 			return {
@@ -140,10 +139,10 @@ export const setOption: Record<
 		
 		_setOption("ontop", value);
 		if (window.__TAURI__) {
-			return getCurrentWindow().setAlwaysOnTop(options.ontop);
+			getCurrentWindow().setAlwaysOnTop(options.ontop).finally(()=>{});
+			return {ok: undefined}
 		}
 	},
-	*/
 	precision: (value, v) => {
 		if (!v) return { err: "v not passed to setOption.precision()" };
 		if (typeof value != "number")

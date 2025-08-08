@@ -974,7 +974,7 @@ setTimeout(()=> {
 	for (var i in splits) {
 		Object.observe(splits[i], splitHandler);
 	}
-}, 100);
+}, 10);
 
 
 if (window.__TAURI__) {
